@@ -70,6 +70,11 @@ public class AuthController {
 
     UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
+    // 🔥 récupérer l'utilisateur complet depuis la base
+    Utilisateur user = utilisateurRepository
+            .findByEmail(userDetails.getEmail())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
     ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
 
     RefreshToken refreshToken =
@@ -84,10 +89,11 @@ public class AuthController {
             .toList();
 
     UserInfoResponse response = new UserInfoResponse(
-            userDetails.getId(),
-            userDetails.getNom(),
-            userDetails.getPrenom(),
-            userDetails.getEmail(),
+            user.getId(),
+            user.getNom(),
+            user.getPrenom(),
+            user.getEmail(),
+            user.getPhoto(), // ✅ IMAGE RENVOYÉE
             roles
     );
 
@@ -96,6 +102,7 @@ public class AuthController {
             .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
             .body(response);
   }
+
 
   // ===========================
   //            SIGNUP

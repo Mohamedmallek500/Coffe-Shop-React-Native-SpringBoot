@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Table(name = "cart_items")
@@ -32,4 +33,13 @@ public class CartItem {
 
     @CreationTimestamp
     private Instant createdAt;
+
+
+    @ManyToMany
+    @JoinTable(
+            name = "cart_item_options",
+            joinColumns = @JoinColumn(name = "cart_item_id"),
+            inverseJoinColumns = @JoinColumn(name = "option_id")
+    )
+    private List<ProductOption> selectedOptions;
 }

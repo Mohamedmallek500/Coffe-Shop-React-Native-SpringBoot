@@ -1,5 +1,6 @@
 package com.bezkoder.spring.security.jwt.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -42,5 +43,6 @@ public class Product {
 
     // relations
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<ProductOption> options;
 }

@@ -7,6 +7,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -35,12 +36,14 @@ public class CartController {
     @PostMapping("/add/{productId}")
     public CartItem addToCart(@PathVariable Long productId,
                               @RequestParam int quantity,
+                              @RequestParam(required = false) List<Long> optionIds,
                               Authentication authentication) {
 
         return cartService.addToCart(
                 authentication.getName(),
                 productId,
-                quantity
+                quantity,
+                optionIds
         );
     }
 
@@ -67,5 +70,18 @@ public class CartController {
     @DeleteMapping("/clear")
     public void clearCart(Authentication authentication) {
         cartService.clearCart(authentication.getName());
+    }
+
+    // Mettre à jour les options d'un item
+    @PutMapping("/{cartItemId}/options")
+    public CartItem updateOptions(@PathVariable Long cartItemId,
+                                  @RequestParam List<Long> optionIds) {
+        return cartService.updateOptions(cartItemId, optionIds);
+    }
+
+    // Obtenir le total du panier
+    @GetMapping("/total")
+    public BigDecimal getCartTotal(Authentication authentication) {
+        return cartService.getCartTotal(authentication.getName());
     }
 }
