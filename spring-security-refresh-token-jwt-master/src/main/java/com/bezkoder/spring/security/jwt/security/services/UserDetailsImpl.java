@@ -23,6 +23,10 @@ public class UserDetailsImpl implements UserDetails {
   @JsonIgnore
   private String motDePasse;
 
+  private String photo;
+  private String telephone;
+  private String cin;
+
   private Collection<? extends GrantedAuthority> authorities;
 
   public UserDetailsImpl(
@@ -31,6 +35,9 @@ public class UserDetailsImpl implements UserDetails {
           String prenom,
           String email,
           String motDePasse,
+          String photo,
+          String telephone,
+          String cin,
           Collection<? extends GrantedAuthority> authorities) {
 
     this.id = id;
@@ -38,18 +45,19 @@ public class UserDetailsImpl implements UserDetails {
     this.prenom = prenom;
     this.email = email;
     this.motDePasse = motDePasse;
+    this.photo = photo;
+    this.telephone = telephone;
+    this.cin = cin;
     this.authorities = authorities;
   }
 
   // ============================
-  //        FIX ROLE
+  //        BUILD USER
   // ============================
   public static UserDetailsImpl build(Utilisateur user) {
 
-    // 🔥 Correction : récupérer l'ENUM du rôle
-    String roleName = user.getRole().getName().name(); // ex : "ETUDIANT"
+    String roleName = user.getRole().getName().name();
 
-    // 🔥 Spring Security lit les rôles via GrantedAuthority
     List<GrantedAuthority> authorities =
             List.of(new SimpleGrantedAuthority(roleName));
 
@@ -59,6 +67,9 @@ public class UserDetailsImpl implements UserDetails {
             user.getPrenom(),
             user.getEmail(),
             user.getMotDePasse(),
+            user.getPhoto(),
+            user.getTelephone(),
+            user.getCin(),
             authorities
     );
   }
@@ -72,6 +83,9 @@ public class UserDetailsImpl implements UserDetails {
   public String getNom() { return nom; }
   public String getPrenom() { return prenom; }
   public String getEmail() { return email; }
+  public String getPhoto() { return photo; }
+  public String getTelephone() { return telephone; }
+  public String getCin() { return cin; }
 
   @Override
   public String getPassword() {
@@ -80,7 +94,7 @@ public class UserDetailsImpl implements UserDetails {
 
   @Override
   public String getUsername() {
-    return email; // identifiant = email
+    return email;
   }
 
   @Override public boolean isAccountNonExpired() { return true; }

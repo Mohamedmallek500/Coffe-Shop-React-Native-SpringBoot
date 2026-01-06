@@ -74,10 +74,6 @@ public class AuthController {
     SecurityContextHolder.getContext().setAuthentication(authentication);
     UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-    Utilisateur user = utilisateurRepository
-            .findByEmail(userDetails.getEmail())
-            .orElseThrow(() -> new RuntimeException("User not found"));
-
     ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
 
     RefreshToken refreshToken =
@@ -91,12 +87,15 @@ public class AuthController {
             .map(a -> a.getAuthority())
             .toList();
 
+    // 🔥 Réponse avec TOUTES les infos
     UserInfoResponse response = new UserInfoResponse(
-            user.getId(),
-            user.getNom(),
-            user.getPrenom(),
-            user.getEmail(),
-            user.getPhoto(), // image renvoyée
+            userDetails.getId(),
+            userDetails.getNom(),
+            userDetails.getPrenom(),
+            userDetails.getEmail(),
+            userDetails.getPhoto(),
+            userDetails.getTelephone(),
+            userDetails.getCin(),
             roles
     );
 
@@ -104,83 +103,5 @@ public class AuthController {
             .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
             .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
             .body(response);
-  }
-
-  // ===========================
-  //            SIGNUP (AVEC IMAGE)
-  // ===========================
-  @PostMapping(value = "/signup", consumes = "multipart/form-data")
-  public ResponseEntity<?> registerUser(
-          @RequestParam("nom") String nom,
-          @RequestParam("prenom") String prenom,
-          @RequestParam("email") String email,
-          @RequestParam("password") String password,
-          @RequestParam("telephone") String telephone,
-          @RequestParam("cin") String cin,
-          @RequestParam("role") ERole role,
-          @RequestParam(value = "photo", required = false) MultipartFile photo
-  ) {
-
-    if (utilisateurRepository.existsByEmail(email)) {
-      return ResponseEntity.badRequest()
-              .body(new MessageResponse("Email already in use"));
-    }
-
-    Utilisateur user;
-
-    switch (role) {
-      case ADMIN -> user = new Admin();
-      case CLIENT -> user = new Client();
-      default -> throw new RuntimeException("Unsupported role");
-    }
-
-    user.setNom(nom);
-    user.setPrenom(prenom);
-    user.setEmail(email);
-    user.setMotDePasse(encoder.encode(password));
-    user.setTelephone(telephone);
-    user.setCin(cin);
-
-    // 🔥 UPLOAD IMAGE
-    if (photo != null && !photo.isEmpty()) {
-      String fileName = fileStorageService.saveFile(photo);
-      user.setPhoto(fileName);
-    }
-
-    Role userRole = roleRepository.findByName(role)
-            .orElseThrow(() -> new RuntimeException("Role not found"));
-
-    user.setRole(userRole);
-
-    utilisateurRepository.save(user);
-
-    return ResponseEntity.ok(
-            new MessageResponse("User registered successfully")
-    );
-  }
-
-  // ===========================
-  //      UPDATE PHOTO PROFIL
-  // ===========================
-  @PutMapping(value = "/users/{id}/photo", consumes = "multipart/form-data")
-  public ResponseEntity<?> updatePhoto(
-          @PathVariable Long id,
-          @RequestParam("photo") MultipartFile photo
-  ) {
-
-    Utilisateur user = utilisateurRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-
-    if (photo == null || photo.isEmpty()) {
-      return ResponseEntity.badRequest()
-              .body(new MessageResponse("Aucune image envoyée"));
-    }
-
-    String fileName = fileStorageService.saveFile(photo);
-    user.setPhoto(fileName);
-
-    utilisateurRepository.save(user);
-
-    return ResponseEntity.ok(new MessageResponse("Photo mise à jour"));
   }
 }
