@@ -28,7 +28,6 @@ public class SignupRequest {
 
     private String cin;
 
-    private String photo;
 
     @NotNull
     private ERole role;  // ADMIN, FORMATEUR, ETUDIANT
@@ -84,14 +83,6 @@ public class SignupRequest {
 
     public void setCin(String cin) {
         this.cin = cin;
-    }
-
-    public String getPhoto() {
-        return photo;
-    }
-
-    public void setPhoto(String photo) {
-        this.photo = photo;
     }
 
     public ERole getRole() {

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.bezkoder.spring.security.jwt.models.*;
+import com.bezkoder.spring.security.jwt.service.FileStorageService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
@@ -28,6 +29,7 @@ import com.bezkoder.spring.security.jwt.repository.UtilisateurRepository;
 import com.bezkoder.spring.security.jwt.security.jwt.JwtUtils;
 import com.bezkoder.spring.security.jwt.security.services.RefreshTokenService;
 import com.bezkoder.spring.security.jwt.security.services.UserDetailsImpl;
+import org.springframework.web.multipart.MultipartFile;
 
 
 @RestController
@@ -53,6 +55,9 @@ public class AuthController {
   @Autowired
   private RefreshTokenService refreshTokenService;
 
+  @Autowired
+  private FileStorageService fileStorageService;
+
   // ===========================
   //            SIGNIN
   // ===========================
@@ -67,10 +72,8 @@ public class AuthController {
     );
 
     SecurityContextHolder.getContext().setAuthentication(authentication);
-
     UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-    // 🔥 récupérer l'utilisateur complet depuis la base
     Utilisateur user = utilisateurRepository
             .findByEmail(userDetails.getEmail())
             .orElseThrow(() -> new RuntimeException("User not found"));
@@ -93,7 +96,7 @@ public class AuthController {
             user.getNom(),
             user.getPrenom(),
             user.getEmail(),
-            user.getPhoto(), // ✅ IMAGE RENVOYÉE
+            user.getPhoto(), // image renvoyée
             roles
     );
 
@@ -103,38 +106,51 @@ public class AuthController {
             .body(response);
   }
 
-
   // ===========================
-  //            SIGNUP
+  //            SIGNUP (AVEC IMAGE)
   // ===========================
-  @PostMapping("/signup")
-  public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest request) {
+  @PostMapping(value = "/signup", consumes = "multipart/form-data")
+  public ResponseEntity<?> registerUser(
+          @RequestParam("nom") String nom,
+          @RequestParam("prenom") String prenom,
+          @RequestParam("email") String email,
+          @RequestParam("password") String password,
+          @RequestParam("telephone") String telephone,
+          @RequestParam("cin") String cin,
+          @RequestParam("role") ERole role,
+          @RequestParam(value = "photo", required = false) MultipartFile photo
+  ) {
 
-    if (utilisateurRepository.existsByEmail(request.getEmail())) {
+    if (utilisateurRepository.existsByEmail(email)) {
       return ResponseEntity.badRequest()
               .body(new MessageResponse("Email already in use"));
     }
 
     Utilisateur user;
 
-    switch (request.getRole()) {
+    switch (role) {
       case ADMIN -> user = new Admin();
       case CLIENT -> user = new Client();
       default -> throw new RuntimeException("Unsupported role");
     }
 
-    user.setNom(request.getNom());
-    user.setPrenom(request.getPrenom());
-    user.setEmail(request.getEmail());
-    user.setMotDePasse(encoder.encode(request.getPassword()));
-    user.setTelephone(request.getTelephone());
-    user.setCin(request.getCin());
-    user.setPhoto(request.getPhoto());
+    user.setNom(nom);
+    user.setPrenom(prenom);
+    user.setEmail(email);
+    user.setMotDePasse(encoder.encode(password));
+    user.setTelephone(telephone);
+    user.setCin(cin);
 
-    Role role = roleRepository.findByName(request.getRole())
+    // 🔥 UPLOAD IMAGE
+    if (photo != null && !photo.isEmpty()) {
+      String fileName = fileStorageService.saveFile(photo);
+      user.setPhoto(fileName);
+    }
+
+    Role userRole = roleRepository.findByName(role)
             .orElseThrow(() -> new RuntimeException("Role not found"));
 
-    user.setRole(role);
+    user.setRole(userRole);
 
     utilisateurRepository.save(user);
 
@@ -144,55 +160,27 @@ public class AuthController {
   }
 
   // ===========================
-  //            LOGOUT
+  //      UPDATE PHOTO PROFIL
   // ===========================
-  @PostMapping("/signout")
-  public ResponseEntity<?> logoutUser() {
+  @PutMapping(value = "/users/{id}/photo", consumes = "multipart/form-data")
+  public ResponseEntity<?> updatePhoto(
+          @PathVariable Long id,
+          @RequestParam("photo") MultipartFile photo
+  ) {
 
-    Object principal =
-            SecurityContextHolder.getContext()
-                    .getAuthentication()
-                    .getPrincipal();
+    Utilisateur user = utilisateurRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("User not found"));
 
-    if (principal instanceof UserDetailsImpl userDetails) {
-      refreshTokenService.deleteByUserId(userDetails.getId());
-    }
-
-    return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, jwtUtils.getCleanJwtCookie().toString())
-            .header(HttpHeaders.SET_COOKIE, jwtUtils.getCleanJwtRefreshCookie().toString())
-            .body(new MessageResponse("Logged out"));
-  }
-
-  // ===========================
-  //        REFRESH TOKEN
-  // ===========================
-  @PostMapping("/refreshtoken")
-  public ResponseEntity<?> refreshToken(HttpServletRequest request) {
-
-    String refreshToken =
-            jwtUtils.getJwtRefreshFromCookies(request);
-
-    if (refreshToken == null) {
+    if (photo == null || photo.isEmpty()) {
       return ResponseEntity.badRequest()
-              .body(new MessageResponse("Refresh token missing"));
+              .body(new MessageResponse("Aucune image envoyée"));
     }
 
-    return refreshTokenService.findByToken(refreshToken)
-            .map(refreshTokenService::verifyExpiration)
-            .map(RefreshToken::getUser)
-            .map(user -> {
-              ResponseCookie jwtCookie =
-                      jwtUtils.generateJwtCookie(user);
-              return ResponseEntity.ok()
-                      .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                      .body(new MessageResponse("Token refreshed"));
-            })
-            .orElseThrow(() ->
-                    new TokenRefreshException(
-                            refreshToken,
-                            "Refresh token not found"
-                    )
-            );
+    String fileName = fileStorageService.saveFile(photo);
+    user.setPhoto(fileName);
+
+    utilisateurRepository.save(user);
+
+    return ResponseEntity.ok(new MessageResponse("Photo mise à jour"));
   }
 }
