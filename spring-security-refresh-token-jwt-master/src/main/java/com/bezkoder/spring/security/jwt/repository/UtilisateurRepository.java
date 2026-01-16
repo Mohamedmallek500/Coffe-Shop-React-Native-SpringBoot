@@ -9,6 +9,12 @@ import com.bezkoder.spring.security.jwt.models.Utilisateur;
 
 @Repository
 public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> {
+
     Optional<Utilisateur> findByEmail(String email);
+
     boolean existsByEmail(String email);
+
+    boolean existsByCin(String cin);
+
+    boolean existsByTelephone(String telephone);
 }

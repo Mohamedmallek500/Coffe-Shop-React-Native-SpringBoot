@@ -21,8 +21,7 @@ public class UserInfoResponse {
 			String photo,
 			String telephone,
 			String cin,
-			List<String> roles
-	) {
+			List<String> roles) {
 		this.id = id;
 		this.nom = nom;
 		this.prenom = prenom;
@@ -33,12 +32,35 @@ public class UserInfoResponse {
 		this.roles = roles;
 	}
 
-	public Long getId() { return id; }
-	public String getNom() { return nom; }
-	public String getPrenom() { return prenom; }
-	public String getEmail() { return email; }
-	public String getPhoto() { return photo; }
-	public String getTelephone() { return telephone; }
-	public String getCin() { return cin; }
-	public List<String> getRoles() { return roles; }
+	public Long getId() {
+		return id;
+	}
+
+	public String getNom() {
+		return nom;
+	}
+
+	public String getPrenom() {
+		return prenom;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public String getPhoto() {
+		return photo;
+	}
+
+	public String getTelephone() {
+		return telephone;
+	}
+
+	public String getCin() {
+		return cin;
+	}
+
+	public List<String> getRoles() {
+		return roles;
+	}
 }
